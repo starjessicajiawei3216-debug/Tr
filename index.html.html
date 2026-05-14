@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>2026年5月 熱海・伊豆旅行 | ATAMI & IZU TRAVEL JOURNAL</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* 高級日系旅遊誌色彩與視覺系統定義 */
+        :root { 
+            --paper: #f6f1ea;        /* 溫潤的日系和紙底色 */
+            --card-bg: #ffffff;      /* 純白內頁卡片 */
+            --ink: #2b2b2b;          /* 靜謐深炭灰（柔和軟黑） */
+            --ink-light: #7a756e;    /* 雜誌次要敘述灰棕 */
+            --accent: #b08968;       /* 溫泉木質棕（主要調性色彩） */
+            --soft: #ded6cc;         /* 榻榻米與麻質淺邊框線色 */
+            
+            /* 高級感的微調現代細緻陰影 */
+            --shadow-premium: 0 4px 24px rgba(43, 43, 43, 0.04), 0 2px 8px rgba(43, 43, 43, 0.02);
+        }
+        
+        /* 統一調整為微軟正黑體 */
+        body, .serif, .playfair, .mono { 
+            font-family: "Microsoft JhengHei", "微軟正黑體", sans-serif !important; 
+            background-color: var(--paper); 
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        /* Premium Journal 卡片基底 */
+        .premium-card { 
+            background: var(--card-bg); 
+            border: 1px solid rgba(222, 214, 204, 0.6);
+            border-radius: 12px; 
+            box-shadow: var(--shadow-premium);
+            transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .premium-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 40px rgba(43, 43, 43, 0.06);
+        }
+
+        /* 頂部高級感導覽列 */
+        .nav-tab { 
+            transition: all 0.3s ease; 
+            position: relative; 
+            color: var(--ink-light); 
+            font-weight: 400;
+            letter-spacing: 0.1em;
+        }
+        .nav-tab.active { 
+            color: var(--ink); 
+            font-weight: 500; 
+        }
+        .nav-tab.active::after {
+            content: ''; position: absolute; bottom: 0; left: 35%; right: 35%; height: 1.5px;
+            background-color: var(--accent);
+        }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* 旅行手帳隨筆風格首字 */
+        .guide-article { line-height: 1.9; text-align: justify; font-weight: 300; }
+        .guide-article::first-letter { 
+            font-size: 2.2rem; font-weight: 600; float: left; margin-right: 10px; line-height: 1;
+            color: var(--accent); 
+            padding: 2px 4px;
+        }
+        
+        /* 手帳式日期選擇器 active/inactive 狀態 */
+        .day-btn-active { 
+            border: 1px solid var(--accent) !important; 
+            background: var(--accent) !important; 
+            color: white !important; 
+            font-weight: 500 !important;
+            transform: scale(1.03);
+            box-shadow: 0 4px 12px rgba(176, 137, 104, 0.2) !important;
+        }
+        .day-btn-inactive { 
+            border: 1px solid var(--soft) !important; 
+            background: white !important; 
+            color: var(--ink-light) !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.01);
+        }
+
+        /* 自訂細緻 Leaflet 地圖容器風格 */
+        #map {
+            filter: grayscale(0.1) sepia(0.05); 
+        }
+
+        /* 擬真極簡航空登機證樣式 */
+        .ticket { 
+            background: white; 
+            border: 1px solid var(--soft); 
+            border-radius: 12px; 
+            position: relative; 
+            box-shadow: var(--shadow-premium);
+        }
+        .ticket-dashed { border-top: 1px dashed var(--soft); margin: 24px 0; position: relative; }
+        .ticket-dashed::before, .ticket-dashed::after { 
+            content: ''; position: absolute; width: 16px; height: 16px; background: var(--paper); 
+            border-radius: 50%; top: -9px; border: 1px solid var(--soft); 
+        }
+        .ticket-dashed::before { left: -33px; }
+        .ticket-dashed::after { right: -33px; }
+
+        /* 條碼背景 */
+        .barcode {
+            background-image: repeating-linear-gradient(90deg, var(--ink), var(--ink) 1px, transparent 1px, transparent 4px);
+        }
+
+        /* 手風琴摺疊美化 */
+        details summary { list-style: none; outline: none; }
+        details summary::-webkit-details-marker { display: none; }
+    </style>
+</head>
+<body class="pb-32">
+
+    <header class="pt-20 pb-14 text-center bg-[#f6f1ea] relative">
+        <div class="max-w-md mx-auto px-6">
+            <p class="tracking-[0.35em] text-[11px] text-[#b08968] font-semibold uppercase mb-3">Atami & Izu Travel Journal</p>
+            <div class="w-6 h-[1px] bg-[#b08968] mx-auto my-4 opacity-60"></div>
+            <h1 class="text-3xl font-normal tracking-[0.05em] text-[#2b2b2b] mt-2">2026年5月 熱海・伊豆旅行</h1>
+            <p class="tracking-[0.25em] text-[10px] text-[#7a756e] uppercase mt-3.5 opacity-80">May 2026 / Memorandum</p>
+        </div>
+    </header>
+
+    <nav class="sticky top-0 z-[100] bg-[#f6f1ea]/90 backdrop-blur-md flex justify-around border-b border-[#ded6cc] px-2">
+        <button onclick="switchTab('itinerary')" id="tab-itinerary" class="nav-tab active py-4 text-[11px] font-medium flex flex-col items-center gap-1 w-full">
+            <i data-lucide="compass" class="w-4 h-4 stroke-[1.2]"></i>行程隨筆
+        </button>
+        <button onclick="switchTab('guide')" id="tab-guide" class="nav-tab py-4 text-[11px] font-medium flex flex-col items-center gap-1 w-full">
+            <i data-lucide="text-quote" class="w-4 h-4 stroke-[1.2]"></i>慢旅紀行
+        </button>
+        <button onclick="switchTab('flight')" id="tab-flight" class="nav-tab py-4 text-[11px] font-medium flex flex-col items-center gap-1 w-full">
+            <i data-lucide="plane" class="w-4 h-4 stroke-[1.2]"></i>航空情報
+        </button>
+        <button onclick="switchTab('wallet')" id="tab-wallet" class="nav-tab py-4 text-[11px] font-medium flex flex-col items-center gap-1 w-full">
+            <i data-lucide="coins" class="w-4 h-4 stroke-[1.2]"></i>外幣換算
+        </button>
+    </nav>
+
+    <main class="p-6 max-w-md mx-auto space-y-8">
+        
+        <section id="sec-itinerary" class="tab-content space-y-6">
+            <div id="itinerary-days" class="flex overflow-x-auto gap-3.5 py-2 no-scrollbar"></div>
+            
+            <div id="day-title-box" class="pt-2"></div>
+            <div id="stay-box" class="flex flex-wrap gap-2.5"></div>
+
+            <div class="premium-card p-1.5 overflow-hidden bg-white">
+                <div class="px-3 pt-3.5 pb-2.5 flex justify-between items-center text-xs border-b border-gray-50">
+                    <span class="font-medium tracking-wide text-gray-700 flex items-center gap-2">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#b08968] stroke-[1.5]"></i> Route Overview / 路線地圖
+                    </span>
+                    <span id="trans-tag" class="text-gray-400 text-[10px] uppercase font-medium tracking-wider">Loading...</span>
+                </div>
+                <div id="map" style="height: 240px;" class="rounded-b-lg"></div>
+            </div>
+            
+            <div id="timeline" class="space-y-6 pt-4"></div>
+        </section>
+
+        <section id="sec-guide" class="tab-content hidden space-y-6">
+            <div id="guide-days" class="flex overflow-x-auto gap-3.5 py-2 no-scrollbar"></div>
+
+            <div class="premium-card p-6 bg-white space-y-6">
+                <h3 id="guide-header" class="text-lg font-medium border-b border-[#ded6cc] pb-3 text-[#2b2b2b] tracking-wide"></h3>
+                
+                <div class="space-y-1">
+                    <p class="text-[10px] text-[#b08968] font-bold uppercase tracking-widest flex items-center gap-1.5"><i data-lucide="feather" class="w-3 h-3"></i> Editorial Review / 旅人筆記</p>
+                    <div id="guide-body" class="guide-article text-xs tracking-wide text-gray-600"></div>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <details open class="group border-t border-b border-gray-100 py-3">
+                        <summary class="flex justify-between items-center font-medium text-xs text-gray-800 select-none cursor-pointer">
+                            <span class="flex items-center gap-2 tracking-wide"><i data-lucide="bookmark" class="w-3.5 h-3.5 text-[#b08968]"></i> 💡 景點紀行小撇步</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 transition-transform group-open:rotate-180 stroke-[1.5]"></i>
+                        </summary>
+                        <div class="pt-3 pl-1.5">
+                            <ul id="guide-tips" class="text-xs space-y-3 text-gray-500 leading-relaxed list-none"></ul>
+                        </div>
+                    </details>
+
+                    <details open class="group border-b border-gray-100 py-3">
+                        <summary class="flex justify-between items-center font-medium text-xs text-gray-800 select-none cursor-pointer">
+                            <span class="flex items-center gap-2 tracking-wide"><i data-lucide="sun-snow" class="w-3.5 h-3.5 text-[#b08968]"></i> ☀️ 溫馨氣候與節奏提醒</span>
+                            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-gray-400 transition-transform group-open:rotate-180 stroke-[1.5]"></i>
+                        </summary>
+                        <div class="pt-3 space-y-3.5 text-xs text-gray-600 pl-1.5">
+                            <div class="space-y-1">
+                                <p class="font-medium text-gray-700 flex items-center gap-1 text-[11px]">✦ 天氣與著裝建議</p>
+                                <p id="advice-weather" class="text-gray-500 leading-relaxed font-light"></p>
+                                
+                                <div class="pt-1">
+                                    <a id="weather-link" href="#" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[10px] text-[#b08968] hover:text-[#9a7352] transition-colors font-medium tracking-wide border-b border-[#ded6cc] pb-0.5">
+                                        查看日本天氣預報 →
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="space-y-1">
+                                <p class="font-medium text-gray-700 flex items-center gap-1 text-[11px]">✦ 慢旅節奏提示</p>
+                                <p id="advice-pace" class="text-gray-500 leading-relaxed font-light"></p>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-flight" class="tab-content hidden space-y-6">
+            <div class="ticket p-6 bg-white">
+                <div class="flex justify-between items-center mb-4 text-xs">
+                    <span class="text-xs font-semibold tracking-widest text-[#b08968] uppercase">Outbound / 去程</span>
+                    <span class="text-[11px] text-gray-400 font-medium tracking-wider">UA 838</span>
+                </div>
+                
+                <div class="flex justify-between items-center text-center my-6">
+                    <div class="w-1/3 text-left">
+                        <p class="text-3xl font-normal text-[#2b2b2b]">KHH</p>
+                        <p class="text-[9px] text-gray-400 uppercase tracking-wider font-medium mt-1">Kaohsiung</p>
+                        <p class="text-[11px] font-medium text-gray-700 mt-2 bg-gray-50 py-0.5 px-2 rounded inline-block">09:55 AM</p>
+                    </div>
+                    <div class="flex-1 px-2 flex flex-col items-center">
+                        <p class="text-[9px] text-gray-400 tracking-wider font-light mb-1.5">Direct 4h 00m</p>
+                        <div class="relative w-full flex items-center justify-center">
+                            <div class="h-[0.5px] bg-gray-200 w-full"></div>
+                            <i data-lucide="plane" class="w-3.5 h-3.5 text-gray-400 absolute bg-white px-1 stroke-[1.2]"></i>
+                        </div>
+                    </div>
+                    <div class="w-1/3 text-right">
+                        <p class="text-3xl font-normal text-[#2b2b2b]">NRT</p>
+                        <p class="text-[9px] text-gray-400 uppercase tracking-wider font-medium mt-1">Tokyo Narita</p>
+                        <p class="text-[11px] font-medium text-gray-700 mt-2 bg-gray-50 py-0.5 px-2 rounded inline-block">14:55 PM</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100 text-center text-[10px]">
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Boarding</p>
+                        <p class="font-medium text-gray-800">09:15 AM</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Baggage</p>
+                        <p class="text-gray-800 font-medium">23kg × 2</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Class</p>
+                        <p class="font-medium text-[#b08968]">ECONOMY</p>
+                    </div>
+                </div>
+
+                <div class="ticket-dashed"></div>
+                <div class="flex flex-col items-center justify-center opacity-60">
+                    <p class="text-[9px] text-gray-400 uppercase tracking-[0.2em] mb-2.5">Saturday · May 23, 2026</p>
+                    <div class="w-full h-8 barcode"></div>
+                </div>
+            </div>
+
+            <div class="ticket p-6 bg-white">
+                <div class="flex justify-between items-center mb-4 text-xs">
+                    <span class="text-xs font-semibold tracking-widest text-[#b08968] uppercase">Inbound / 回程</span>
+                    <span class="text-[11px] text-gray-400 font-medium tracking-wider">UA 837</span>
+                </div>
+                
+                <div class="flex justify-between items-center text-center my-6">
+                    <div class="w-1/3 text-left">
+                        <p class="text-3xl font-normal text-[#2b2b2b]">NRT</p>
+                        <p class="text-[9px] text-gray-400 uppercase tracking-wider font-medium mt-1">Tokyo Narita</p>
+                        <p class="text-[11px] font-medium text-gray-700 mt-2 bg-gray-50 py-0.5 px-2 rounded inline-block">17:55 PM</p>
+                    </div>
+                    <div class="flex-1 px-2 flex flex-col items-center">
+                        <p class="text-[9px] text-gray-400 tracking-wider font-light mb-1.5">Direct 4h 05m</p>
+                        <div class="relative w-full flex items-center justify-center">
+                            <div class="h-[0.5px] bg-gray-200 w-full"></div>
+                            <i data-lucide="plane" class="w-3.5 h-3.5 text-gray-400 absolute bg-white px-1 rotate-180 stroke-[1.2]"></i>
+                        </div>
+                    </div>
+                    <div class="w-1/3 text-right">
+                        <p class="text-3xl font-normal text-[#2b2b2b]">KHH</p>
+                        <p class="text-[9px] text-gray-400 uppercase tracking-wider font-medium mt-1">Kaohsiung</p>
+                        <p class="text-[11px] font-medium text-gray-700 mt-2 bg-gray-50 py-0.5 px-2 rounded inline-block">21:00 PM</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 pt-4 border-t border-gray-100 text-center text-[10px]">
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Boarding</p>
+                        <p class="font-medium text-gray-800">17:15 PM</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Baggage</p>
+                        <p class="text-gray-800 font-medium">23kg × 2</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 uppercase tracking-wider mb-0.5">Class</p>
+                        <p class="font-medium text-[#b08968]">ECONOMY</p>
+                    </div>
+                </div>
+
+                <div class="ticket-dashed"></div>
+                <div class="flex flex-col items-center justify-center opacity-60">
+                    <p class="text-[9px] text-gray-400 uppercase tracking-[0.2em] mb-2.5">Saturday · May 30, 2026</p>
+                    <div class="w-full h-8 barcode"></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-wallet" class="tab-content hidden">
+            <div class="premium-card p-8 bg-white space-y-6">
+                <div class="text-center">
+                    <h2 class="text-base font-medium tracking-wide text-[#2b2b2b]">日幣快速換算台幣</h2>
+                    <p class="text-[10px] text-gray-400 font-medium uppercase tracking-wider mt-1">Exchanger / 即時參考匯率 0.215</p>
+                </div>
+                <div class="relative bg-gray-50/60 p-4 rounded-xl border border-gray-100">
+                    <span class="absolute left-4 top-4 text-gray-400 text-[10px] uppercase font-bold tracking-wider">JPY 金額 ¥</span>
+                    <input type="number" id="calc-input" placeholder="0" class="w-full text-2xl border-b border-gray-200 pb-1 pt-6 focus:outline-none bg-transparent font-medium text-[#2b2b2b] tracking-wide">
+                </div>
+                <button onclick="calculate()" class="w-full bg-[#b08968] text-white py-3.5 font-medium tracking-widest rounded-lg hover:bg-[#a0795c] transition-colors uppercase text-xs shadow-sm">
+                    Convert Currency
+                </button>
+                <div class="pt-4 border-t border-dashed border-gray-100 text-center space-y-1">
+                    <p class="text-[9px] text-gray-400 uppercase tracking-widest">換算後新台幣約為</p>
+                    <div id="res-twd" class="text-3xl font-semibold text-[#b08968] tracking-tight">NT$ 0</div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // 資料結構：引進不卡 404 的全新穩定版 weatherKeyword 搜尋欄位
+        const tripData = {
+            1: { date: "5/23 (SAT)", stay: "ゲストハウス『真鶴の家』", stayLat: 35.155, stayLng: 139.1363, trans: "大眾運輸 🚃", header: "抵達日本・真鶴海邊慢旅開始",
+                weatherKeyword: "真鶴",
+                guideText: "搭乘 UA838 抵達成田機場後，轉乘 N’EX 與 JR 東海道線一路南下至真鶴。第一晚入住安靜的海邊老宅『真鶴の家』，適合慢慢適應日本節奏。",
+                weatherAdvice: "21°C 晴朗舒適。海邊微風清涼，夜晚氣溫較低，建議準備防風外套襯衫。",
+                paceAdvice: "首日多為中長途大眾運輸移動，抵達民宿後建議於海濱村落散步，早點休息調整狀態。",
+                tips: [
+                    "<b>交通方式：</b>成田到真鶴車程約 3 小時，建議提前加值好實體或數位智慧型交通卡（Suica）。",
+                    "<b>避開人潮：</b>於品川站換乘動線比巨大的東京站更為洗鍊，能大幅減省步行換線時間。",
+                    "<b>必吃重點：</b>真鶴周邊商店入夜後打簧較早，建議沿途先行備妥夜間飲品與小點心。"
+                ],
+                points: [
+                    { time: "14:55", name: "成田機場 NRT", desc: "順利抵達日本 (UA838)", lat: 35.7767, lng: 140.3929, url: "http://maps.google.com/?q=Narita+Airport", duration: "1.5 小時" },
+                    { time: "17:40", name: "品川站", desc: "轉乘 JR 東海道線南下", lat: 35.6284, lng: 139.739, url: "http://maps.google.com/?q=Shinagawa+Station", duration: "25 分鐘" }
+                ]
+            },
+            2: { date: "5/24 (SUN)", stay: "ゲストハウス『真鶴の家』", stayLat: 35.155, stayLng: 139.1363, trans: "JR 🚃", header: "熱海・藝術、美食與花火之夜",
+                weatherKeyword: "熱海",
+                guideText: "今天前往熱海展開散策。從熱海商店街開始，一路到來宮神社與 MOA 美術館，晚上則迎來整趟旅程的高潮——熱海海上花火大會。",
+                weatherAdvice: "22°C 晴朗舒適。白天陽光充沛適合散步，夜間海邊觀賞火花體感微涼，需備薄外衣。",
+                paceAdvice: "景點橫跨山腰美術館與海岸，階梯步行較多，傍晚卡位花火前宜留出咖啡廳歇腳時間。",
+                tips: [
+                    "<b>交通：</b>善用 JR 往返真鶴與熱海。花火大會散場時車流龐大，可慢行錯開尖峰段。",
+                    "<b>拍照機位：</b>MOA 美術館巨大落地窗俯瞰相模灣是絕佳光影，下午 3 點前抵達光線最柔和。",
+                    "<b>在地名產：</b>熱海商店街的方形熱海布丁與磯炸海鮮串是定番散策美食。"
+                ],
+                points: [
+                    { time: "10:00", name: "熱海商店街", desc: "熱海布丁與海鮮散策", lat: 35.103, lng: 139.077, url: "http://maps.google.com/?q=Atami+Shops", duration: "1.5 小時" },
+                    { time: "11:30", name: "來宮神社", desc: "能量神社與大樟樹神木巡禮", lat: 35.1005, lng: 139.0777, url: "http://maps.google.com/?q=Kinomiya+Shrine", duration: "1 小時" },
+                    { time: "13:30", name: "MOA 美術館", desc: "俯瞰熱海海景的當代藝術聖地", lat: 35.1103, lng: 139.0816, url: "http://maps.google.com/?q=MOA+Museum", duration: "2.5 小時" },
+                    { time: "20:20", name: "熱海海上花火大會", desc: "璀璨震撼的夜空花火盛宴", lat: 35.0968, lng: 139.0724, url: "http://maps.google.com/?q=Atami+Fireworks", duration: "1.5 小時" }
+                ]
+            },
+            3: { date: "5/25 (MON)", stay: "稲取銀水荘", stayLat: 34.8235, stayLng: 139.0383, trans: "JR＋Toyota Rent 🚗", header: "東伊豆海岸・城崎斷崖與大室山",
+                weatherKeyword: "伊東",
+                guideText: "上午從真鶴搭車至伊東站，於 Toyota Rent a Car 取車後正式展開自駕。沿海岸前往城ヶ崎海岸與大室山，入住溫泉旅館。",
+                weatherAdvice: "19°C 局部多雲。山頂與斷崖海風顯著，紫外線較強，請注重防風與基礎防曬。",
+                paceAdvice: "今日正式開啟自駕。東伊豆海岸線景色開闊，唯局部路段多急彎，請保持車距、安全慢行。",
+                tips: [
+                    "<b>自駕交車：</b>伊東站前 Toyota 門市手續簡便，取車時建議詳加確認外觀並保全險。",
+                    "<b>絕景視角：</b>大室山纜車登頂後的火山口步道視野極佳，可完美框景翠綠火山盆地。",
+                    "<b>動線提醒：</b>城ヶ崎海岸的門脇吊橋限流，若遇旅行團人潮可稍微錯開拍照時間。"
+                ],
+                points: [
+                    { time: "10:00", name: "伊東站 Toyota Rent", desc: "取車並核對自駕保險事宜", lat: 34.974, lng: 139.092, url: "http://maps.google.com/?q=Ito+Station+Toyota", duration: "45 分鐘" },
+                    { time: "11:10", name: "城ヶ崎海岸", desc: "壯麗的雄偉斷崖與門脇吊橋", lat: 34.8993, lng: 139.1295, url: "http://maps.google.com/?q=Jogasaki+Coast", duration: "1.5 小時" },
+                    { time: "14:00", name: "大室山", desc: "形似抹茶蛋糕的療猶死火山", lat: 34.8972, lng: 139.0946, url: "http://maps.google.com/?q=Mt+Omuro", duration: "2 小時" }
+                ]
+            },
+            4: { date: "5/26 (TUE)", stay: "碧き凪ぎの宿 明治館", stayLat: 34.908, stayLng: 138.791, trans: "自駕 🚗", header: "伊豆南海岸・白濱神社與龍宮窟",
+                weatherKeyword: "土肥溫泉",
+                guideText: "橫跨南伊豆。造訪海景鳥居白濱神社與天然海蝕洞龍宮窟。午後前往堂ヶ島搭乘遊覽船，入住西伊豆土肥溫泉。",
+                weatherAdvice: "20°C 陰天偶陣雨。海蝕洞岩壁略帶濕滑，宜搭配具抓地力的休閒鞋出行。",
+                paceAdvice: "由南伊豆橫切至西伊豆的山路車程較長，中途可造訪地方道之驛放鬆，避免過勞駕駛。",
+                tips: [
+                    "<b>心形奇景：</b>自龍宮窟頂部的環狀步道向下鳥瞰，能拍出愛心形狀的天然海蝕地形。",
+                    "<b>清晨避人：</b>白濱神社的海上紅鳥居是熱門地標，建議早晨前往能捕捉無人的純淨海景。",
+                    "<b>航運情報：</b>堂ヶ島遊覽船隨每日風浪狀況彈性停駛，出發前半小時請前往官網確認狀況。"
+                ],
+                points: [
+                    { time: "09:10", name: "白濱神社", desc: "矗立於礁岩之上的古老海上鳥居", lat: 34.6925, lng: 138.9658, url: "http://maps.google.com/?q=Shirahama+Shrine", duration: "1 小時" },
+                    { time: "12:30", name: "龍宮窟", desc: "大自然劈開的愛心形海蝕天窗", lat: 34.6486, lng: 138.8854, url: "http://maps.google.com/?q=Ryugu+Sea+Cave", duration: "1 小時" },
+                    { time: "15:30", name: "堂ヶ島遊覽船", desc: "穿梭神秘天然天然紀念物洞窟", lat: 34.767, lng: 138.768, url: "http://maps.google.com/?q=Dogashima+Cruise", duration: "1.5 小時" }
+                ]
+            },
+            5: { date: "5/27 (WED)", stay: "ホテルラフォーレ修善寺", stayLat: 34.9745, stayLng: 138.9367, trans: "自駕 🚗", header: "中伊豆慢旅・淨蓮瀑布與修善寺",
+                weatherKeyword: "修善寺",
+                guideText: "安排輕鬆慢遊。走訪伊豆代表景點淨蓮瀑布，隨後前往修善寺溫泉街，享受小京都氛圍。",
+                weatherAdvice: "18°C 晴朗。溪谷林蔭與山區體感稍涼，建議配備輕暖棉質長袖衫。",
+                paceAdvice: "今日以古街與竹林散策為主，步調悠閒，可調慢生活時鐘，沉浸於溫泉鄉的靜謐美學中。",
+                tips: [
+                    "<b>在地名產：</b>淨蓮瀑布溪流孕育頂級山葵，入口處的純手工現磨『山葵霜淇淋』微辛爽口。",
+                    "<b>暮色竹林：</b>修善寺竹林小徑在下午 4 點斜射光灑落時最具幽靜禪意，桂橋一抹朱紅點綴極美。",
+                    "<b>步道安全：</b>瀑布底部的石階略帶水氣，步行時請留心台階慢步而行。"
+                ],
+                points: [
+                    { time: "10:20", name: "淨蓮瀑布", desc: "名曲詠讚的玄武岩林間飛瀑", lat: 34.8913, lng: 138.9276, url: "http://maps.google.com/?q=Joren+Falls", duration: "1.5 小時" },
+                    { time: "12:00", name: "修善寺溫泉街", desc: "極具伊豆小京都底蘊的古老禪寺街景", lat: 34.9745, lng: 138.9367, url: "http://maps.google.com/?q=Shuzenji+Onsen", duration: "3 小時" }
+                ]
+            },
+            6: { date: "5/28 (THU)", stay: "HOTEL CLAD", stayLat: 35.3075, stayLng: 138.9637, trans: "自駕 🚗", header: "箱根與富士山・天空步道之日",
+                weatherKeyword: "箱根",
+                guideText: "北上箱根。造訪三島天空步道與箱根神社。下午前往御殿場 Outlet 購物並入住 Outlet 內的飯店。",
+                weatherAdvice: "16°C 高原晴朗。御殿場高原入夜溫度降幅快且風大，防寒大衣為必備物品。",
+                paceAdvice: "今日包含高空高處步行與午後高強度的購物行程，在駛入商圈前建議在車內稍作歇息。",
+                tips: [
+                    "<b>經典地標：</b>箱根神社水上和平鳥居排隊拍攝者眾，建議抓緊自由時間依序停留。",
+                    "<b>富士大景：</b>三島天空步道（Mishima Skywalk）在上午 10 點前空氣能見度最高，是眺望富士山的大好時機。",
+                    "<b>宿所優勢：</b>今日下榻的 HOTEL CLAD 緊鄰奧特萊斯，採購完畢可直上客房解乏、浸泡溫泉。"
+                ],
+                points: [
+                    { time: "09:10", name: "三島天空步道", desc: "日本最長的全景眺望富士山景觀吊橋", lat: 35.1778, lng: 138.9187, url: "http://maps.google.com/?q=Mishima+Skywalk", duration: "2 小時" },
+                    { time: "11:15", name: "箱根神社", desc: "靜謐蘆之湖畔的唯美水上巨型鳥居", lat: 35.2049, lng: 139.0261, url: "http://maps.google.com/?q=Hakone+Shrine", duration: "1.5 小時" },
+                    { time: "14:00", name: "御殿場 Outlets", desc: "富士山相伴的頂級名品奢華購物體驗", lat: 35.3075, lng: 138.9637, url: "http://maps.google.com/?q=Gotemba+Premium+Outlets", duration: "4 小時以上" }
+                ]
+            },
+            7: { date: "5/29 (FRI)", stay: "Super Hotel Premier 東京站", stayLat: 35.6812, stayLng: 139.7671, trans: "巴士 🚌", header: "返回東京・城市散策",
+                weatherKeyword: "東京",
+                guideText: "還車後搭乘高速巴士返回東京。下午入住東京車站附近，前往銀座購物。",
+                weatherAdvice: "23°C 晴朗市區。都會大樓林立且室內空調充足，推薦洋蔥式穿法便於穿脫調節。",
+                paceAdvice: "重返繁華東京，需注意東京車站內線路較繁雜。後半日步行強度稍高，步調可依心情調配。",
+                tips: [
+                    "<b>特產採買：</b>東京車站地下街（八重洲口）是精緻伴手禮的大本營，回宿前可預留採購額度。",
+                    "<b>還車提醒：</b>御殿場還車前記得加滿油，並保留好加油收據以供工作人員核對。",
+                    "<b>銀座街景：</b>GINZA SIX 與無印良品旗艦店均在步行圈，週末部分街道劃設為行人徒步區，甚是好走。"
+                ],
+                points: [
+                    { time: "10:30", name: "御殿場還車", desc: "順利結束五日伊豆自駕路程", lat: 35.3084, lng: 138.9349, url: "http://maps.google.com/?q=Gotemba+Car+Return", duration: "30 分鐘" },
+                    { time: "15:30", name: "銀座散策", desc: "沉浸於摩登都會的旗艦美學購物饗宴", lat: 35.6717, lng: 139.764, url: "http://maps.google.com/?q=Ginza+District", duration: "3.5 小時" }
+                ]
+            },
+            8: { date: "5/30 (SAT)", stay: "HOME", trans: "N'EX＋✈️", header: "東京・旅程尾聲",
+                weatherKeyword: "成田",
+                guideText: "最後一天悠閒早餐後，搭乘 N’EX 前往成田機場，結束美好的慢旅行。",
+                weatherAdvice: "22°C 晴。全日皆在航站與室內移動，著裝以輕便、穿脫方便的休閒球鞋為主。",
+                paceAdvice: "今日重心為返程。搭乘成田特快特急前請務必精準預留進站與安檢時間。",
+                tips: [
+                    "<b>月台預留：</b>東京站搭乘 N'EX 的總武線月台身處地底深處，建議提早 15 分鐘由大廳進站。",
+                    "<b>機場時程：</b>因應國際線行李託運與通關，請嚴格落實提早 2.5 至 3 小時抵達機場 T1 的計畫。",
+                    "<b>免稅補貨：</b>成田機場免稅店是封箱前的最後機會，清酒與職人糕點常在此快速補齊。"
+                ],
+                points: [
+                    { time: "13:30", name: "東京站", desc: "搭乘成田特快 N'EX 舒適直達航站", lat: 35.6812, lng: 139.7671, url: "http://maps.google.com/?q=Tokyo+Station", duration: "1 小時" },
+                    { time: "15:30", name: "成田機場 NRT", desc: "一號航廈辦理 UA837 返台手續", lat: 35.7767, lng: 140.3929, url: "http://maps.google.com/?q=Narita+Airport+T1", duration: "2.5 小時" }
+                ]
+            }
+        };
+
+        let map, markers = [], currentDay = 1;
+
+        // 初始化 Day 切換元件
+        function initDaySelectors() {
+            const containers = ['itinerary-days', 'guide-days'];
+            containers.forEach(containerId => {
+                let html = "";
+                for(let i=1; i<=8; i++) {
+                    const dateStr = tripData[i].date.split(' ')[0];
+                    html += `
+                    <button onclick="changeDay(${i})" id="btn-${containerId}-${i}" class="day-btn flex-shrink-0 flex flex-col items-center focus:outline-none">
+                        <span class="mono text-[9px] text-gray-400 mb-1 tracking-tight">${dateStr}</span>
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-medium transition-all duration-300 day-btn-inactive">0${i}</div>
+                    </button>`;
+                }
+                document.getElementById(containerId).innerHTML = html;
+            });
+        }
+
+        // 切換分頁邏輯
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(`sec-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+            if(tab === 'itinerary' && map) setTimeout(() => map.invalidateSize(), 200);
+            lucide.createIcons();
+        }
+
+        // 切換天數控制
+        function changeDay(d) {
+            currentDay = d;
+            updateButtonStyles();
+            renderItinerary();
+            renderGuide();
+        }
+
+        // 更新按鈕狀態視覺
+        function updateButtonStyles() {
+            ['itinerary-days', 'guide-days'].forEach(id => {
+                for(let i=1; i<=8; i++) {
+                    const btn = document.querySelector(`#btn-${id}-${i} div`);
+                    if(btn) {
+                        btn.className = (i === currentDay) 
+                            ? "w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-medium transition-all duration-300 day-btn-active" 
+                            : "w-10 h-10 rounded-full flex items-center justify-center text-[11px] font-medium transition-all duration-300 day-btn-inactive";
+                    }
+                }
+            });
+        }
+
+        // 渲染 Itinerary 區塊內容
+        function renderItinerary() {
+            const data = tripData[currentDay];
+            
+            // 【核心注入】依要求於 renderItinerary 中動態生成並同步串接穩定版 weatherUrl 搜尋網址
+            const weatherUrl = `https://tenki.jp/search/?keyword=${encodeURIComponent(data.weatherKeyword)}`;
+            const weatherLinkEl = document.getElementById('weather-link');
+            if (weatherLinkEl) {
+                weatherLinkEl.href = weatherUrl;
+            }
+            
+            document.getElementById('day-title-box').innerHTML = `
+                <div class="space-y-1">
+                    <p class="playfair font-semibold text-[10px] tracking-[0.2em] text-[#b08968] uppercase">${data.date} · ROUTE</p>
+                    <h2 class="text-xl font-normal text-[#2b2b2b] tracking-wide">Day 0${currentDay} · ${data.header}</h2>
+                </div>
+            `;
+            
+            document.getElementById('stay-box').innerHTML = `
+                <span class="bg-white text-gray-600 text-[10px] font-medium px-3 py-1 rounded-full border border-gray-200/80 shadow-[0_2px_6px_rgba(0,0,0,0.01)] flex items-center gap-1.5">
+                    <span class="w-1 h-1 rounded-full bg-[#b08968]"></span> 宿：${data.stay}
+                </span>
+                <span class="bg-white text-gray-600 text-[10px] font-medium px-3 py-1 rounded-full border border-gray-200/80 shadow-[0_2px_6px_rgba(0,0,0,0.01)] flex items-center gap-1.5">
+                    <span class="w-1 h-1 rounded-full bg-gray-400"></span> ${data.trans}
+                </span>
+            `;
+
+            let displayPoints = [...data.points];
+            if (currentDay < 8) {
+                displayPoints.push({ time: "17:00", name: `精選旅宿 Check-in`, desc: `辦理 ${data.stay} 入住手續，沉浸於溫泉鄉悠閒時光。`, lat: data.stayLat, lng: data.stayLng, url: `https://www.google.com/maps/search/?api=1&query=${data.stayLat},${data.stayLng}`, duration: "定點慢享" });
+            }
+
+            let html = "";
+            displayPoints.forEach((p, idx) => {
+                const isStay = p.time === "17:00";
+                html += `
+                <div class="flex gap-5">
+                    <div class="flex flex-col items-center">
+                        <div class="w-2.5 h-2.5 rounded-full ${isStay ? 'bg-[#b08968]' : 'bg-white border border-gray-400'} mt-2 z-10 shadow-sm"></div>
+                        ${idx !== displayPoints.length - 1 ? '<div class="w-[0.5px] h-full bg-[#ded6cc] my-1 opacity-70"></div>' : ''}
+                    </div>
+                    <div class="flex-1 premium-card p-5 bg-white space-y-3.5">
+                        <div class="flex justify-between items-center text-[10px]">
+                            <span class="mono font-medium bg-gray-50 text-[#b08968] px-2 py-0.5 rounded border border-gray-100">
+                                ${p.time}
+                            </span>
+                            <span class="text-gray-400 font-light flex items-center gap-1">
+                                <i data-lucide="hourglass" class="w-3 h-3 stroke-[1.2]"></i> 預計停留：${p.duration || '1-2 小時'}
+                            </span>
+                        </div>
+                        <div class="space-y-1">
+                            <h4 class="font-medium text-sm text-[#2b2b2b] tracking-wide">${p.name}</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed font-light">${p.desc}</p>
+                        </div>
+                        <div class="flex justify-end pt-1">
+                            <a href="${p.url}" target="_blank" rel="noopener noreferrer" class="text-[9px] font-medium border border-gray-200 text-gray-500 hover:text-gray-800 px-2.5 py-1 rounded-md flex items-center gap-1 bg-gray-50/50 hover:bg-gray-50 transition-all duration-200">
+                                <i data-lucide="map" class="w-3 h-3 text-[#b08968] stroke-[1.5]"></i> 地圖導覽
+                            </a>
+                        </div>
+                    </div>
+                </div>`;
+            });
+            document.getElementById('timeline').innerHTML = html;
+            updateMap(displayPoints);
+            lucide.createIcons();
+        }
+
+        // 渲染 Guide 區塊
+        function renderGuide() {
+            const data = tripData[currentDay];
+            document.getElementById('guide-header').innerText = `Day 0${currentDay} | ${data.header}`;
+            document.getElementById('guide-body').innerHTML = data.guideText;
+            
+            let tipHtml = "";
+            data.tips.forEach(tip => { 
+                tipHtml += `<li class="flex items-start gap-2 text-gray-500 leading-relaxed font-light">
+                    <span class="text-[#b08968] mt-1 text-[10px]">✦</span>
+                    <span>${tip}</span>
+                </li>`; 
+            });
+            document.getElementById('guide-tips').innerHTML = tipHtml;
+
+            // 寫入當日天氣細緻說明
+            document.getElementById('advice-weather').innerText = data.weatherAdvice || "山海氣候溫差大，隨身攜帶輕便禦寒長袖衫為佳。";
+            document.getElementById('advice-pace').innerText = data.paceAdvice || "放慢步調，留白充足，盡情浸潤於慢生活節奏。";
+            
+            lucide.createIcons();
+        }
+
+        // 更新地圖標記外觀
+        function updateMap(points) {
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            let latlngs = [];
+            points.forEach((p, idx) => {
+                const isStay = p.time === "17:00";
+                const m = L.marker([p.lat, p.lng], {
+                    icon: L.divIcon({
+                        html: isStay 
+                            ? `<div class="bg-[#b08968] text-white rounded-full w-5 h-5 flex items-center justify-center text-[9px] border border-white shadow-md font-medium">宿</div>` 
+                            : `<div class="bg-white text-gray-700 rounded-full w-5 h-5 flex items-center justify-center text-[9px] border border-gray-400 shadow-sm font-medium">${idx+1}</div>`, 
+                        className: ''
+                    })
+                }).addTo(map);
+                markers.push(m);
+                latlngs.push([p.lat, p.lng]);
+            });
+            if(latlngs.length > 0) map.fitBounds(L.latLngBounds(latlngs), {padding: [40, 40]});
+        }
+
+        // 匯率快速換算
+        function calculate() {
+            const val = document.getElementById('calc-input').value;
+            document.getElementById('res-twd').innerText = `NT$ ${Math.round(val * 0.215).toLocaleString()}`;
+        }
+
+        // 初始化網頁載入
+        window.onload = () => {
+            initDaySelectors();
+            lucide.createIcons();
+            map = L.map('map', {zoomControl: false, scrollWheelZoom: false}).setView([35.1, 139.1], 10);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+            changeDay(1);
+        };
+    </script>
+</body>
+</html>
